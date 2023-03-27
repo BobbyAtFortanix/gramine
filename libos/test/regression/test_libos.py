@@ -1018,6 +1018,16 @@ class TC_40_FileSystem(RegressionTestCase):
         self.assertIn('/proc/1/exe: link: /proc_common', lines)
         self.assertIn('/proc/1/root: link: /', lines)
 
+    class ProcFile:
+        def __init__(self, filePath, min_val, max_val):
+            self.path = filePath
+            self.min = min_val
+            self.max = max_val
+
+    proc_const_files = [
+        ProcFile("/proc/sys/vm/max_map_count", 65530, 65530),
+    ]
+
     def test_001_devfs(self):
         stdout, _ = self.run_binary(['devfs'])
         self.assertIn('/dev/.', stdout)
@@ -1035,6 +1045,10 @@ class TC_40_FileSystem(RegressionTestCase):
         stdout, _ = self.run_binary(['device_passthrough'])
         self.assertIn('TEST OK', stdout)
 
+    def test_003_proc_hardcoded_files(self):
+        stdout, _ = self.run_binary(['proc_hardcoded_files'])
+        self.assertIn('TEST OK', stdout)
+ 
     def test_010_path(self):
         stdout, _ = self.run_binary(['proc_path'])
         self.assertIn('proc path test success', stdout)

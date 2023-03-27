@@ -81,6 +81,7 @@ tests = {
     'ppoll': {},
     'proc_common': {},
     'proc_cpuinfo': {},
+    'proc_hardcoded_files': {},
     'proc_path': {},
     'proc_stat': {},
     'pselect': {},
