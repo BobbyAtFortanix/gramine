@@ -128,6 +128,7 @@ tests = {
     'sighandler_reset': {},
     'sighandler_sigpipe': {},
     'signal_multithread': {},
+    'signal1-illegal_send': {},
     'sigprocmask_pending': {},
     'sigterm_multithread': {},
     'socket_ioctl': {},
