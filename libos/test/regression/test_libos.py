@@ -1,9 +1,12 @@
+import queue
 import os
 import re
 import shutil
 import signal
 import socket
 import subprocess
+import threading
+import time
 import unittest
 
 import json
@@ -24,6 +27,7 @@ CPUINFO_TEST_FLAGS = [
     'syscall',
 ]
 
+signal_sent = False
 
 class TC_00_Unittests(RegressionTestCase):
     def test_000_spinlock(self):
@@ -939,6 +943,51 @@ class TC_30_Syscall(RegressionTestCase):
     def test_095_signal1_illegal_send(self):
         stdout, _ = self.run_binary(['signal1-illegal_send'])
         self.assertIn('TEST OK', stdout)
+
+    def thread_run_signal1_illegal_send(self):
+        print("thread_run_signal1_illegal_send - pre")
+        signal_sent = False
+        # Find the PID of the 'signal1_illegal_send' command using 'ps aux'
+        ps_output = subprocess.check_output(['ps', 'aux']).decode('utf-8')
+        end_time = time.time() + 30
+        not_done = True
+        while time.time() < end_time and not_done:
+            for line in ps_output.split('\n'):
+                if 'signal1-illegal_send' in line:
+                    print(f"line: '{line}'")
+                    if '--do-external-signal-test' in line:
+                        pid = int(line.split()[1])
+                        if HAS_SGX: # non-sgx version exits before we can catch it: usleep() doesn't work
+                            time.sleep(1.01)
+                        # send illegal signals from the host using kill()
+                        try:
+                            os.kill(pid, signal.SIGSEGV)    # 11
+                            print(f"SIGSEGV sent to process with PID {pid}")
+#                            os.kill(pid, signal.SIGILL)     # 4
+#                            print(f"SIGILL sent to process with PID {pid}")
+#                            os.kill(pid, signal.SIGBUS)     # 7 or 10 (POSIX - go figure)
+#                            print(f"SIGBUS sent to process with PID {pid}")
+#                            os.kill(pid, signal.SIGFPE)    # 8
+#                            print(f"SIGFPE sent to process with PID {pid}")
+                            signal_sent = True
+                        except ProcessLookupError:
+                            print("ProcessLookupError time: {}".format(time.time()))
+                        not_done = False
+            time.sleep(0.010)
+        print("thread_run_signal1_illegal_send - POST")
+
+    @unittest.skip("Enable to make sure we are not serving kill() for hardware signals")
+    def test_096_signal1_illegal_send_external(self):
+        # Start a thread to run the shell command
+        thread = threading.Thread(target=self.thread_run_signal1_illegal_send, args=())
+        thread.start()
+
+        stdout, _ = self.run_binary(['signal1-illegal_send', '--do-external-signal-test'])
+
+        # Wait for the thread to finish
+        thread.join()
+        self.assertIn('TEST OK', stdout)
+        self.assertTrue(signal_sent, "Helper thread was unable to send a signal to the enclave.")
 
     def test_099_kill_all(self):
         stdout, _ = self.run_binary(['kill_all'])

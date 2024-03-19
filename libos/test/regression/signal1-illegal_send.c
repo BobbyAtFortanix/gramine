@@ -308,6 +308,11 @@ static void SigQueue(uintptr_t sig)
 
 int main (int argc, const char ** argv)
 {
+    printf("  argc: %d\n", argc);
+    for(int i=0; i<argc; ++i) {
+        printf("arg[%d]: '%s'\n", i, argv[i]);
+    }
+    printf("   pid: %d\n", getpid());
     INSTALL_SIGNAL_HANDLER(SIGBUS);
     INSTALL_SIGNAL_HANDLER(SIGFPE);
     INSTALL_SIGNAL_HANDLER(SIGILL);
@@ -317,15 +322,41 @@ int main (int argc, const char ** argv)
 
     bool success = true;
 
-    success = RunTestCase(SIGILL  , SI_USER    , 0, Kill     , SIGILL  ) && success;
-    success = RunTestCase(SIGBUS  , SI_USER    , 0, Kill     , SIGBUS  ) && success;
-    success = RunTestCase(SIGFPE  , SI_USER    , 0, Kill     , SIGFPE  ) && success;
-    success = RunTestCase(SIGSEGV , SI_USER    , 0, Kill     , SIGSEGV ) && success;
-    success = RunTestCase(SIGILL  , ILL_ILLOPC/*ILL_ILLOPN*/ , 2, Ud2      , 0       ) && success;
-    success = RunTestCase(SIGFPE  , FPE_INTDIV , 3, DivZero  , 0       ) && success;
-//    success = RunTestCase(SIGSEGV , SEGV_MAPERR, 3, Segv     , 0       ) && success;
-//    success = RunTestCase(SIGFPE  , FPE_FLTDIV , 2, FpDivZero, 0       ) && success;
+    if ((argc > 1) && (0 == strcasecmp(argv[1], "--do-external-signal-test"))) {
+        usleep(300000); // sleep 300 sec
+        // make sure no external signal was received
+        if (IS_SIGNAL_RECEIVED(SIGILL)) {
+            printf("FAILED: SIGILL was received\n");
+            success = false;
+        } else
+            printf("      : SIGILL was NOT received\n");
+        if (IS_SIGNAL_RECEIVED(SIGBUS)) {
+            printf("FAILED: SIGBUS was received\n");
+            success = false;
+        } else
+            printf("      : SIGBUS was NOT received\n");
+        if (IS_SIGNAL_RECEIVED(SIGFPE)) {
+            printf("FAILED: SIGFPE was received\n");
+            success = false;
+        } else
+            printf("      : SIGFPE was NOT received\n");
+        if (IS_SIGNAL_RECEIVED(SIGSEGV)) {
+            printf("FAILED: SIGSEGV was received\n");
+            success = false;
+        } else
+            printf("      : SIGSEGV was NOT received\n");
 
+    } else {
+
+        success = RunTestCase(SIGILL  , SI_USER    , 0, Kill     , SIGILL  ) && success;
+        success = RunTestCase(SIGBUS  , SI_USER    , 0, Kill     , SIGBUS  ) && success;
+        success = RunTestCase(SIGFPE  , SI_USER    , 0, Kill     , SIGFPE  ) && success;
+        success = RunTestCase(SIGSEGV , SI_USER    , 0, Kill     , SIGSEGV ) && success;
+        success = RunTestCase(SIGILL  , ILL_ILLOPC/*ILL_ILLOPN*/ , 2, Ud2      , 0       ) && success;
+        success = RunTestCase(SIGFPE  , FPE_INTDIV , 3, DivZero  , 0       ) && success;
+//        success = RunTestCase(SIGSEGV , SEGV_MAPERR, 3, Segv     , 0       ) && success;
+//        success = RunTestCase(SIGFPE  , FPE_FLTDIV , 2, FpDivZero, 0       ) && success;
+    }
 
     printf("signal1-illegal_send TEST %s\n", success?"OK":"FAILED");
 
